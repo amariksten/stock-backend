@@ -1,0 +1,25 @@
+{
+  "name": "stock-ai-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Backend for Stock AI mobile app MVP",
+  "main": "server.js",
+  "scripts": {
+    "dev": "nodemon server.js",
+    "start": "node server.js",
+    "audit": "npm audit"
+  },
+  "dependencies": {
+    "@google/genai": "1.0.1",
+    "cors": "2.8.5",
+    "dotenv": "16.4.7",
+    "express": "4.21.2",
+    "express-rate-limit": "^7.5.0"
+  },
+  "devDependencies": {
+    "nodemon": "3.1.10"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
