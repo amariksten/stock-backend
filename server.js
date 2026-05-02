@@ -1,5 +1,6 @@
 require("dotenv").config();
 
+const path = require("path");
 const express = require("express");
 const cors = require("cors");
 const rateLimit = require("express-rate-limit");
@@ -12,6 +13,7 @@ const PORT = process.env.PORT || 4000;
 const CORS_ORIGIN = process.env.CORS_ORIGIN || "*";
 app.use(cors({ origin: CORS_ORIGIN }));
 app.use(express.json({ limit: "1mb" }));
+app.use(express.static(path.join(__dirname, "public")));
 
 // ── ENV ───────────────────────────────────────────────────────────────────────
 const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY;
@@ -401,6 +403,120 @@ app.post("/api/analyze", async (req, res) => {
       code: "ANALYSIS_ERROR",
       details: error.message,
     });
+  }
+});
+
+// ── MARKET OVERVIEW ───────────────────────────────────────────────────────────────────────
+const INDEX_SYMBOLS = [
+  { symbol: "SPY",  label: "S&P 500" },
+  { symbol: "QQQ",  label: "NASDAQ 100" },
+  { symbol: "DIA",  label: "Dow Jones" },
+  { symbol: "IWM",  label: "Russell 2000" },
+];
+
+app.get("/api/market/overview", async (req, res) => {
+  try {
+    const quotes = await Promise.all(
+      INDEX_SYMBOLS.map(async ({ symbol, label }) => {
+        try {
+          const q = await getQuote(symbol);
+          return { symbol, label, c: q.c, d: q.d, dp: q.dp, pc: q.pc };
+        } catch { return { symbol, label, c: null, d: null, dp: null }; }
+      })
+    );
+    res.json({ indices: quotes });
+  } catch (error) {
+    res.status(500).json({ error: "Could not fetch market overview", details: error.message });
+  }
+});
+
+// ── MARKET NEWS ───────────────────────────────────────────────────────────────────────
+app.get("/api/market/news", async (req, res) => {
+  try {
+    const category = ["general","forex","crypto","merger"].includes(req.query.category)
+      ? req.query.category : "general";
+    const key = `mktNews:${category}`;
+    const cached = getCache(key);
+    if (cached) return res.json({ news: cached });
+    const url = `https://finnhub.io/api/v1/news?category=${category}&minId=0&token=${FINNHUB_API_KEY}`;
+    const data = await fetchJson(url, "Finnhub market news");
+    const result = (Array.isArray(data) ? data : []).slice(0, 20).map(n => ({
+      id: n.id, datetime: n.datetime, headline: n.headline,
+      source: n.source, summary: n.summary, url: n.url, image: n.image || "",
+    }));
+    setCache(key, result);
+    res.json({ news: result });
+  } catch (error) {
+    res.status(500).json({ error: "Could not fetch news", details: error.message });
+  }
+});
+
+// ── AI CHAT ─────────────────────────────────────────────────────────────────────────────
+app.post("/api/chat", async (req, res) => {
+  try {
+    const missingEnv = getMissingEnv();
+    if (missingEnv.length > 0) return res.status(500).json({ error: "Missing env", missingEnv });
+    const question = String(req.body.question || "").trim().slice(0, 500);
+    const lang = req.body.lang === "en" ? "en" : "et";
+    if (!question) return res.status(400).json({ error: "question required" });
+
+    let stockContext = "";
+    const sym = sanitizeSymbol(req.body.symbol || "");
+    if (sym) {
+      try {
+        const [q, news, profile, fin] = await Promise.all([
+          getQuote(sym), getCompanyNews(sym), getCompanyProfile(sym), getBasicFinancials(sym)
+        ]);
+        stockContext = `\nStock context for ${sym} (${profile.name}):\nPrice: $${q.c?.toFixed(2)} | Change: ${q.dp?.toFixed(2)}%\nP/E: ${fin?.peRatioTTM ?? 'N/A'} | 52w High: $${fin?.week52High ?? 'N/A'} | Low: $${fin?.week52Low ?? 'N/A'}\nRecent news: ${news.slice(0,3).map(n=>n.headline).join(' | ')}`;
+      } catch { /* ignore */ }
+    }
+
+    const langInstr = lang === "en"
+      ? "Answer in English. Be concise and clear."
+      : "Vasta eesti keeles. Ole lühike ja selge.";
+
+    const prompt = `You are a professional stock market analyst assistant. ${langInstr}\n\nUser question: ${question}${stockContext}\n\nProvide a structured JSON response with these exact fields:\n{\n  "answer": "detailed answer in 2-4 paragraphs",\n  "sentiment": "bullish" | "neutral" | "bearish",\n  "trend": "up" | "down" | "sideways",\n  "riskLevel": "low" | "medium" | "high",\n  "keyPoints": ["point1", "point2", "point3"],\n  "disclaimer": "short disclaimer"\n}\n\nIMPORTANT: Return ONLY valid JSON, no markdown.`;
+
+    const response = await ai.models.generateContent({ model: GEMINI_MODEL, contents: prompt });
+    const text = typeof response.text === "function" ? response.text() : response.text;
+    let parsed;
+    try { parsed = JSON.parse(text); }
+    catch { parsed = { answer: text, sentiment: "neutral", trend: "sideways", riskLevel: "medium", keyPoints: [], disclaimer: "" }; }
+    res.json(parsed);
+  } catch (error) {
+    console.error("Chat route error:", error);
+    res.status(500).json({ error: "Chat failed", details: error.message });
+  }
+});
+
+// ── SCREENER ─────────────────────────────────────────────────────────────────────────────
+const SCREENER_UNIVERSE = ["AAPL","MSFT","NVDA","AMZN","GOOGL","META","TSLA","BRK.B","JPM","V","UNH","XOM","JNJ","MA","PG","HD","MRK","AVGO","CVX","LLY","ABBV","COST","PEP","KO","ADBE","WMT","MCD","CRM","AMD","INTC","NFLX","QCOM","TXN","NEE","PM","HON","UPS","BA","CAT","GS","MS","SBUX","AMGN","GILD","DE","LOW","BLK","SPGI","AXP","PYPL"];
+
+app.get("/api/screener", async (req, res) => {
+  try {
+    const cKey = `screener:all`;
+    let results = getCache(cKey);
+    if (!results) {
+      const batch = await Promise.all(
+        SCREENER_UNIVERSE.map(async (sym) => {
+          try {
+            const [q, p, f] = await Promise.all([getQuote(sym), getCompanyProfile(sym), getBasicFinancials(sym)]);
+            return { symbol: sym, name: p.name || sym, industry: p.finnhubIndustry || "",
+              c: q.c, d: q.d, dp: q.dp, marketCap: p.marketCapitalization,
+              pe: f?.peRatioTTM ?? null, week52High: f?.week52High ?? null, week52Low: f?.week52Low ?? null };
+          } catch { return null; }
+        })
+      );
+      results = batch.filter(Boolean);
+      setCache(cKey, results);
+    }
+    const sector = req.query.sector || "";
+    const sortBy = req.query.sortBy || "marketCap";
+    let filtered = sector ? results.filter(r => r.industry.toLowerCase().includes(sector.toLowerCase())) : results;
+    filtered.sort((a, b) => (b[sortBy] ?? -Infinity) - (a[sortBy] ?? -Infinity));
+    res.json({ results: filtered.slice(0, 50) });
+  } catch (error) {
+    res.status(500).json({ error: "Screener failed", details: error.message });
   }
 });
 

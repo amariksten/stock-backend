@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="description" content="Stock AI — Professional stock market analysis powered by Gemini AI"/>
+  <title>Stock AI — Market Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+  <!-- ── SIDEBAR (desktop) / TOP BAR ───────────────────────── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="logo">
+      <span class="logo-text">Stock<span class="logo-accent">AI</span></span>
+      <span class="logo-sub" data-i18n="tagline">Market Intelligence</span>
+    </div>
+    <nav class="sidenav">
+      <button class="nav-btn active" data-tab="dashboard" onclick="switchTab('dashboard')">
+        <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+        <span data-i18n="nav_dashboard">Dashboard</span>
+      </button>
+      <button class="nav-btn" data-tab="watchlist" onclick="switchTab('watchlist')">
+        <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+        <span data-i18n="nav_watchlist">Watchlist</span>
+      </button>
+      <button class="nav-btn" data-tab="screener" onclick="switchTab('screener')">
+        <svg viewBox="0 0 24 24"><path d="M4.25 5.66c-.19.19-.19.51 0 .7l6.77 6.77v7.44c0 .35.42.52.67.27l2.84-3.26c.14-.17.14-.42 0-.59L5.02 5.66c-.2-.19-.57-.19-.77 0zM20.48 3.56H3.52c-.54 0-.82.65-.44 1.04l7.42 7.42 2.56 2.56 7.85-9.98c.39-.39.11-1.04-.43-1.04z"/></svg>
+        <span data-i18n="nav_screener">Screener</span>
+      </button>
+      <button class="nav-btn" data-tab="ai" onclick="switchTab('ai')">
+        <svg viewBox="0 0 24 24"><path d="M21 15.99l-8-8-4 4-4-4v4H3v-8.99L11 15l4-4 4 4h2v1z"/><path d="M3 21h18v-2H3v2z"/></svg>
+        <span data-i18n="nav_ai">AI Analyst</span>
+      </button>
+      <button class="nav-btn" data-tab="news" onclick="switchTab('news')">
+        <svg viewBox="0 0 24 24"><path d="M20 3H4v10c0 2.21 1.79 4 4 4h6c2.21 0 4-1.79 4-4v-3h2c1.11 0 2-.89 2-2V5c0-1.11-.89-2-2-2zm0 5h-2V5h2v3zM4 19h16v2H4z"/></svg>
+        <span data-i18n="nav_news">News</span>
+      </button>
+    </nav>
+    <div class="sidebar-bottom">
+      <button class="lang-btn" onclick="toggleLang()" id="langBtn">🌐 ET</button>
+    </div>
+  </aside>
+
+  <!-- ── MOBILE TOP BAR ────────────────────────────────────── -->
+  <header class="mobile-header">
+    <span class="logo-text">Stock<span class="logo-accent">AI</span></span>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="lang-btn-sm" onclick="toggleLang()" id="langBtnMobile">🌐 ET</button>
+    </div>
+  </header>
+
+  <!-- ── MAIN CONTENT ──────────────────────────────────────── -->
+  <main class="main" id="main">
+
+    <!-- DASHBOARD -->
+    <section id="tab-dashboard" class="tab-section active">
+      <div class="page-header">
+        <h1 data-i18n="dashboard_title">Market Overview</h1>
+        <div class="search-wrap">
+          <input id="searchInput" type="text" class="search-input" data-i18n-placeholder="search_placeholder" placeholder="Search symbol or company…" autocomplete="off" oninput="onSearchInput(this.value)"/>
+          <div id="searchDropdown" class="search-dropdown hidden"></div>
+        </div>
+      </div>
+
+      <!-- Market Indices -->
+      <div class="indices-row" id="indicesRow">
+        <div class="index-card skeleton"><div class="idx-label">S&P 500</div><div class="idx-price">—</div><div class="idx-change">—</div></div>
+        <div class="index-card skeleton"><div class="idx-label">NASDAQ 100</div><div class="idx-price">—</div><div class="idx-change">—</div></div>
+        <div class="index-card skeleton"><div class="idx-label">Dow Jones</div><div class="idx-price">—</div><div class="idx-change">—</div></div>
+        <div class="index-card skeleton"><div class="idx-label">Russell 2000</div><div class="idx-price">—</div><div class="idx-change">—</div></div>
+      </div>
+
+      <!-- Stock Detail Panel (shows after search/click) -->
+      <div id="stockPanel" class="stock-panel hidden">
+        <div class="stock-panel-header">
+          <div>
+            <div class="sp-symbol" id="spSymbol">—</div>
+            <div class="sp-name" id="spName">—</div>
+            <span class="sp-badge" id="spBadge">—</span>
+          </div>
+          <div class="sp-price-area">
+            <div class="sp-price" id="spPrice">—</div>
+            <div class="sp-change" id="spChange">—</div>
+          </div>
+          <div class="sp-actions">
+            <button class="btn-primary" id="spAiBtn" onclick="analyzeCurrentStock()" data-i18n="btn_ai_analyze">AI Analysis</button>
+            <button class="btn-secondary" id="spWatchBtn" onclick="toggleWatchlistCurrent()" data-i18n="btn_add_watch">+ Watchlist</button>
+          </div>
+        </div>
+
+        <!-- Chart -->
+        <div class="chart-wrap" id="chartWrap">
+          <div class="chart-label" data-i18n="chart_weekly">Weekly Candles</div>
+          <canvas id="stockChart" height="160"></canvas>
+        </div>
+
+        <!-- Stats grid -->
+        <div class="stats-grid" id="statsGrid"></div>
+
+        <!-- AI Analysis Result -->
+        <div id="aiResult" class="ai-result hidden"></div>
+
+        <!-- News -->
+        <div id="stockNews" class="stock-news"></div>
+      </div>
+
+      <!-- Welcome placeholder -->
+      <div id="welcomeCard" class="welcome-card">
+        <div class="welcome-icon">📈</div>
+        <h2 data-i18n="welcome_title">Search for a stock to get started</h2>
+        <p data-i18n="welcome_sub">Enter a ticker or company name above to view price data, charts, and AI analysis.</p>
+      </div>
+    </section>
+
+    <!-- WATCHLIST -->
+    <section id="tab-watchlist" class="tab-section">
+      <div class="page-header">
+        <h1 data-i18n="watchlist_title">Watchlist</h1>
+        <div class="search-wrap">
+          <input id="wlSearchInput" type="text" class="search-input" data-i18n-placeholder="search_placeholder" placeholder="Add symbol…" autocomplete="off" oninput="onWlSearchInput(this.value)"/>
+          <div id="wlDropdown" class="search-dropdown hidden"></div>
+        </div>
+      </div>
+      <div id="watchlistTable" class="wl-table"></div>
+    </section>
+
+    <!-- SCREENER -->
+    <section id="tab-screener" class="tab-section">
+      <div class="page-header"><h1 data-i18n="screener_title">Stock Screener</h1></div>
+      <div class="screener-filters">
+        <select id="sectorFilter" onchange="loadScreener()" class="filter-select">
+          <option value="" data-i18n="filter_all_sectors">All Sectors</option>
+          <option value="technology">Technology</option>
+          <option value="financial">Financial</option>
+          <option value="healthcare">Healthcare</option>
+          <option value="consumer">Consumer</option>
+          <option value="energy">Energy</option>
+          <option value="industrial">Industrial</option>
+        </select>
+        <select id="sortFilter" onchange="loadScreener()" class="filter-select">
+          <option value="marketCap" data-i18n="sort_mktcap">Market Cap ↓</option>
+          <option value="dp" data-i18n="sort_change">Change % ↓</option>
+          <option value="c" data-i18n="sort_price">Price ↓</option>
+        </select>
+      </div>
+      <div id="screenerTable" class="screener-table"></div>
+    </section>
+
+    <!-- AI ANALYST -->
+    <section id="tab-ai" class="tab-section">
+      <div class="page-header"><h1 data-i18n="ai_title">AI Analyst</h1></div>
+      <div class="ai-chat-wrap">
+        <div class="ai-quick-btns" id="quickBtns"></div>
+        <div class="ai-chat-messages" id="chatMessages"></div>
+        <div class="ai-input-row">
+          <input id="chatInput" type="text" class="search-input" data-i18n-placeholder="ai_placeholder" placeholder="Ask anything about the market…" onkeydown="if(event.key==='Enter')sendChat()"/>
+          <button class="btn-primary" onclick="sendChat()" data-i18n="btn_send">Send</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- NEWS -->
+    <section id="tab-news" class="tab-section">
+      <div class="page-header">
+        <h1 data-i18n="news_title">Market News</h1>
+        <div class="news-filters">
+          <button class="filter-btn active" onclick="loadNews('general',this)" data-i18n="cat_general">General</button>
+          <button class="filter-btn" onclick="loadNews('forex',this)">Forex</button>
+          <button class="filter-btn" onclick="loadNews('crypto',this)">Crypto</button>
+          <button class="filter-btn" onclick="loadNews('merger',this)">M&A</button>
+        </div>
+      </div>
+      <div id="newsFeed" class="news-feed"></div>
+    </section>
+
+  </main>
+
+  <!-- ── MOBILE BOTTOM NAV ──────────────────────────────────── -->
+  <nav class="mobile-nav">
+    <button class="mob-btn active" data-tab="dashboard" onclick="switchTab('dashboard')">
+      <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+      <span data-i18n="nav_dashboard">Dashboard</span>
+    </button>
+    <button class="mob-btn" data-tab="watchlist" onclick="switchTab('watchlist')">
+      <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+      <span data-i18n="nav_watchlist">Watchlist</span>
+    </button>
+    <button class="mob-btn" data-tab="screener" onclick="switchTab('screener')">
+      <svg viewBox="0 0 24 24"><path d="M4.25 5.66c-.19.19-.19.51 0 .7l6.77 6.77v7.44c0 .35.42.52.67.27l2.84-3.26c.14-.17.14-.42 0-.59L5.02 5.66c-.2-.19-.57-.19-.77 0zM20.48 3.56H3.52c-.54 0-.82.65-.44 1.04l7.42 7.42 2.56 2.56 7.85-9.98c.39-.39.11-1.04-.43-1.04z"/></svg>
+      <span data-i18n="nav_screener">Screener</span>
+    </button>
+    <button class="mob-btn" data-tab="ai" onclick="switchTab('ai')">
+      <svg viewBox="0 0 24 24"><path d="M21 15.99l-8-8-4 4-4-4v4H3v-8.99L11 15l4-4 4 4h2v1z"/><path d="M3 21h18v-2H3v2z"/></svg>
+      <span data-i18n="nav_ai">AI</span>
+    </button>
+    <button class="mob-btn" data-tab="news" onclick="switchTab('news')">
+      <svg viewBox="0 0 24 24"><path d="M20 3H4v10c0 2.21 1.79 4 4 4h6c2.21 0 4-1.79 4-4v-3h2c1.11 0 2-.89 2-2V5c0-1.11-.89-2-2-2zm0 5h-2V5h2v3zM4 19h16v2H4z"/></svg>
+      <span data-i18n="nav_news">News</span>
+    </button>
+  </nav>
+
+  <script src="app.js"></script>
+</body>
+</html>
