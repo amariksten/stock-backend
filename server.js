@@ -353,13 +353,14 @@ app.get("/api/stock/:symbol", async (req, res) => {
     const symbol = sanitizeSymbol(req.params.symbol);
     if (!symbol) return res.status(400).json({ error: "Symbol is required", code: "MISSING_SYMBOL" });
 
-    const [quote, news, profile] = await Promise.all([
+    const [quote, news, profile, candles] = await Promise.all([
       getQuote(symbol),
       getCompanyNews(symbol),
       getCompanyProfile(symbol),
+      getWeeklyCandles(symbol),
     ]);
 
-    res.json({ symbol, quote, news, profile });
+    res.json({ symbol, quote, news, profile, candles });
   } catch (error) {
     console.error("Stock route error:", error);
     const isNotFound = error.message?.includes("invalid quote");
@@ -392,7 +393,7 @@ app.post("/api/analyze", async (req, res) => {
 
     const analysis = await analyzeWithGemini(symbol, quote, news, profile, candles, financials);
 
-    res.json({ symbol, quote, news, profile, analysis });
+    res.json({ symbol, quote, news, profile, candles, financials, analysis });
   } catch (error) {
     console.error("Analyze route error:", error);
     res.status(500).json({
