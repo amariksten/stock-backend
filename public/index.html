@@ -1,16 +1,17 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="et">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <meta name="description" content="Stock AI — Professional stock market analysis powered by Gemini AI"/>
-  <title>Stock AI — Market Intelligence</title>
+  <meta name="description" content="Stock AI — Professionaalne aktsiaturuanalüüs Gemini AI abil"/>
+  <title>StockAI — Turu Intelligentsus</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
-  <!-- ── SIDEBAR (desktop) / TOP BAR ───────────────────────── -->
+
+  <!-- SIDEBAR -->
   <aside class="sidebar" id="sidebar">
     <div class="logo">
       <span class="logo-text">Stock<span class="logo-accent">AI</span></span>
@@ -30,7 +31,7 @@
         <span data-i18n="nav_screener">Screener</span>
       </button>
       <button class="nav-btn" data-tab="ai" onclick="switchTab('ai')">
-        <svg viewBox="0 0 24 24"><path d="M21 15.99l-8-8-4 4-4-4v4H3v-8.99L11 15l4-4 4 4h2v1z"/><path d="M3 21h18v-2H3v2z"/></svg>
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
         <span data-i18n="nav_ai">AI Analyst</span>
       </button>
       <button class="nav-btn" data-tab="news" onclick="switchTab('news')">
@@ -39,19 +40,17 @@
       </button>
     </nav>
     <div class="sidebar-bottom">
-      <button class="lang-btn" onclick="toggleLang()" id="langBtn">🌐 ET</button>
+      <button class="lang-btn" onclick="toggleLang()" id="langBtn">🌐 EN</button>
     </div>
   </aside>
 
-  <!-- ── MOBILE TOP BAR ────────────────────────────────────── -->
+  <!-- MOBILE HEADER -->
   <header class="mobile-header">
     <span class="logo-text">Stock<span class="logo-accent">AI</span></span>
-    <div style="display:flex;gap:8px;align-items:center">
-      <button class="lang-btn-sm" onclick="toggleLang()" id="langBtnMobile">🌐 ET</button>
-    </div>
+    <button class="lang-btn-sm" onclick="toggleLang()" id="langBtnMobile">🌐 EN</button>
   </header>
 
-  <!-- ── MAIN CONTENT ──────────────────────────────────────── -->
+  <!-- MAIN -->
   <main class="main" id="main">
 
     <!-- DASHBOARD -->
@@ -63,16 +62,12 @@
           <div id="searchDropdown" class="search-dropdown hidden"></div>
         </div>
       </div>
-
-      <!-- Market Indices -->
       <div class="indices-row" id="indicesRow">
-        <div class="index-card skeleton"><div class="idx-label">S&P 500</div><div class="idx-price">—</div><div class="idx-change">—</div></div>
+        <div class="index-card skeleton"><div class="idx-label">S&amp;P 500</div><div class="idx-price">—</div><div class="idx-change">—</div></div>
         <div class="index-card skeleton"><div class="idx-label">NASDAQ 100</div><div class="idx-price">—</div><div class="idx-change">—</div></div>
         <div class="index-card skeleton"><div class="idx-label">Dow Jones</div><div class="idx-price">—</div><div class="idx-change">—</div></div>
         <div class="index-card skeleton"><div class="idx-label">Russell 2000</div><div class="idx-price">—</div><div class="idx-change">—</div></div>
       </div>
-
-      <!-- Stock Detail Panel (shows after search/click) -->
       <div id="stockPanel" class="stock-panel hidden">
         <div class="stock-panel-header">
           <div>
@@ -89,24 +84,14 @@
             <button class="btn-secondary" id="spWatchBtn" onclick="toggleWatchlistCurrent()" data-i18n="btn_add_watch">+ Watchlist</button>
           </div>
         </div>
-
-        <!-- Chart -->
         <div class="chart-wrap" id="chartWrap">
           <div class="chart-label" data-i18n="chart_weekly">Weekly Candles</div>
           <canvas id="stockChart" height="160"></canvas>
         </div>
-
-        <!-- Stats grid -->
         <div class="stats-grid" id="statsGrid"></div>
-
-        <!-- AI Analysis Result -->
         <div id="aiResult" class="ai-result hidden"></div>
-
-        <!-- News -->
         <div id="stockNews" class="stock-news"></div>
       </div>
-
-      <!-- Welcome placeholder -->
       <div id="welcomeCard" class="welcome-card">
         <div class="welcome-icon">📈</div>
         <h2 data-i18n="welcome_title">Search for a stock to get started</h2>
@@ -145,7 +130,7 @@
           <option value="c" data-i18n="sort_price">Price ↓</option>
         </select>
       </div>
-      <div id="screenerTable" class="screener-table"></div>
+      <div id="screenerTable"></div>
     </section>
 
     <!-- AI ANALYST -->
@@ -166,10 +151,10 @@
       <div class="page-header">
         <h1 data-i18n="news_title">Market News</h1>
         <div class="news-filters">
-          <button class="filter-btn active" onclick="loadNews('general',this)" data-i18n="cat_general">General</button>
-          <button class="filter-btn" onclick="loadNews('forex',this)">Forex</button>
-          <button class="filter-btn" onclick="loadNews('crypto',this)">Crypto</button>
-          <button class="filter-btn" onclick="loadNews('merger',this)">M&A</button>
+          <button class="filter-btn active" data-source="finnhub" onclick="loadNews('finnhub',this)">Finnhub</button>
+          <button class="filter-btn" data-source="yahoo" onclick="loadNews('yahoo',this)">Yahoo Finance</button>
+          <button class="filter-btn" data-source="bbc" onclick="loadNews('bbc',this)">BBC</button>
+          <button class="filter-btn" data-source="alphavantage" onclick="loadNews('alphavantage',this)">Alpha Vantage</button>
         </div>
       </div>
       <div id="newsFeed" class="news-feed"></div>
@@ -177,7 +162,7 @@
 
   </main>
 
-  <!-- ── MOBILE BOTTOM NAV ──────────────────────────────────── -->
+  <!-- MOBILE BOTTOM NAV -->
   <nav class="mobile-nav">
     <button class="mob-btn active" data-tab="dashboard" onclick="switchTab('dashboard')">
       <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
@@ -192,7 +177,7 @@
       <span data-i18n="nav_screener">Screener</span>
     </button>
     <button class="mob-btn" data-tab="ai" onclick="switchTab('ai')">
-      <svg viewBox="0 0 24 24"><path d="M21 15.99l-8-8-4 4-4-4v4H3v-8.99L11 15l4-4 4 4h2v1z"/><path d="M3 21h18v-2H3v2z"/></svg>
+      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
       <span data-i18n="nav_ai">AI</span>
     </button>
     <button class="mob-btn" data-tab="news" onclick="switchTab('news')">

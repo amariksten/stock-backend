@@ -430,17 +430,40 @@ app.get("/api/market/overview", async (req, res) => {
   }
 });
 
-// ── MARKET NEWS ───────────────────────────────────────────────────────────────────────
+// ── BBC RSS PARSER ────────────────────────────────────────────────────────────────────
+function parseBBCRSS(xml) {
+  const items = xml.match(/<item>([\s\S]*?)<\/item>/g) || [];
+  return items.slice(0, 20).map(item => {
+    const title = (item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) || item.match(/<title>(.*?)<\/title>/))?.[1]?.trim() || "";
+    const link  = (item.match(/<link>(.*?)<\/link>/) || [])[1]?.trim() || "";
+    const pub   = (item.match(/<pubDate>(.*?)<\/pubDate>/) || [])[1]?.trim() || "";
+    const desc  = (item.match(/<description><!\[CDATA\[(.*?)\]\]><\/description>/) || item.match(/<description>(.*?)<\/description>/))?.[1] || "";
+    const img   = (item.match(/url="([^"]*?\.jpg[^"]*?)"/i) || [])[1] || "";
+    return {
+      id: Math.random(),
+      datetime: pub ? Math.floor(new Date(pub).getTime() / 1000) : Math.floor(Date.now() / 1000),
+      headline: title, source: "BBC News",
+      summary: desc.replace(/<[^>]+>/g, "").slice(0, 200),
+      url: link, image: img,
+    };
+  }).filter(n => n.headline);
+}
+
+// ── FINNHUB MARKET NEWS (Reuters filteeritud välja) ───────────────────────────────────
 app.get("/api/market/news", async (req, res) => {
   try {
-    const category = ["general","forex","crypto","merger"].includes(req.query.category)
-      ? req.query.category : "general";
-    const key = `mktNews:${category}`;
+    const source = (req.query.source || "").toLowerCase();
+    const key = `mktNews:general:${source}`;
     const cached = getCache(key);
     if (cached) return res.json({ news: cached });
-    const url = `https://finnhub.io/api/v1/news?category=${category}&minId=0&token=${FINNHUB_API_KEY}`;
+    const url = `https://finnhub.io/api/v1/news?category=general&minId=0&token=${FINNHUB_API_KEY}`;
     const data = await fetchJson(url, "Finnhub market news");
-    const result = (Array.isArray(data) ? data : []).slice(0, 20).map(n => ({
+    let items = (Array.isArray(data) ? data : [])
+      .filter(n => !((n.source || "").toLowerCase().includes("reuters")));
+    if (source) {
+      items = items.filter(n => (n.source || "").toLowerCase().includes(source));
+    }
+    const result = items.slice(0, 20).map(n => ({
       id: n.id, datetime: n.datetime, headline: n.headline,
       source: n.source, summary: n.summary, url: n.url, image: n.image || "",
     }));
@@ -448,6 +471,52 @@ app.get("/api/market/news", async (req, res) => {
     res.json({ news: result });
   } catch (error) {
     res.status(500).json({ error: "Could not fetch news", details: error.message });
+  }
+});
+
+// ── BBC BUSINESS NEWS ─────────────────────────────────────────────────────────────────
+app.get("/api/news/bbc", async (req, res) => {
+  const key = "news:bbc";
+  const cached = getCache(key);
+  if (cached) return res.json({ news: cached });
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10000);
+    const r = await fetch("https://feeds.bbci.co.uk/news/business/rss.xml", { signal: controller.signal });
+    clearTimeout(timer);
+    const xml = await r.text();
+    const result = parseBBCRSS(xml);
+    setCache(key, result);
+    res.json({ news: result });
+  } catch (error) {
+    res.status(500).json({ error: "Could not fetch BBC news", details: error.message });
+  }
+});
+
+// ── ALPHA VANTAGE NEWS ────────────────────────────────────────────────────────────────
+const AV_API_KEY = process.env.ALPHA_VANTAGE_KEY || "";
+app.get("/api/news/alphavantage", async (req, res) => {
+  if (!AV_API_KEY || AV_API_KEY.includes("your_")) {
+    return res.status(400).json({ error: "Alpha Vantage API võti puudub", code: "MISSING_AV_KEY" });
+  }
+  const key = "news:av";
+  const cached = getCache(key);
+  if (cached) return res.json({ news: cached });
+  try {
+    const url = `https://www.alphavantage.co/query?function=NEWS_SENTIMENT&topics=financial_markets&limit=20&apikey=${AV_API_KEY}`;
+    const data = await fetchJson(url, "Alpha Vantage news");
+    const result = (data.feed || []).slice(0, 20).map(n => ({
+      id: Math.random(),
+      datetime: n.time_published
+        ? Math.floor(new Date(n.time_published.replace(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/, "$1-$2-$3T$4:$5:$6")).getTime() / 1000)
+        : Math.floor(Date.now() / 1000),
+      headline: n.title || "", source: n.source || "Alpha Vantage",
+      summary: n.summary || "", url: n.url || "", image: n.banner_image || "",
+    }));
+    setCache(key, result);
+    res.json({ news: result });
+  } catch (error) {
+    res.status(500).json({ error: "Could not fetch Alpha Vantage news", details: error.message });
   }
 });
 
